@@ -1,56 +1,68 @@
-const itemList = [
-  'Item A',
-  'Item B',
-  'Item C',
-  'Item D',
-  'Item E',
-  // Add more items here
-];
+let currentItem1 = null;
+let currentItem2 = null;
 
-let currentItemIndex1 = 0;
-let currentItemIndex2 = 1;
-let votes = {};
+async function getItems() {
+  try {
+    const response = await fetch('/api/items');
+    const items = await response.json();
+
+    if (items.length < 2) {
+      displayTopList();
+      return;
+    }
+
+    currentItem1 = items[0];
+    currentItem2 = items[1];
+
+    displayItems();
+  } catch (error) {
+    console.error(error);
+  }
+}
 
 function displayItems() {
   const item1 = document.getElementById('item1');
   const item2 = document.getElementById('item2');
-  
-  item1.textContent = itemList[currentItemIndex1];
-  item2.textContent = itemList[currentItemIndex2];
+
+  item1.textContent = currentItem1.name;
+  item2.textContent = currentItem2.name;
 }
 
-function vote(itemNumber) {
-  const winningItemIndex = itemNumber === 1 ? currentItemIndex1 : currentItemIndex2;
-  const losingItemIndex = itemNumber === 1 ? currentItemIndex2 : currentItemIndex1;
+async function vote(itemNumber) {
+  try {
+    const winner = itemNumber === 1 ? currentItem1 : currentItem2;
+    const loser = itemNumber === 1 ? currentItem2 : currentItem1;
 
-  if (votes[winningItemIndex]) {
-    votes[winningItemIndex]++;
-  } else {
-    votes[winningItemIndex] = 1;
+    await fetch('/api/vote', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ winner, loser }),
+    });
+
+    await getItems();
+  } catch (error) {
+    console.error(error);
   }
-
-  currentItemIndex1 += 2;
-  currentItemIndex2 += 2;
-
-  if (currentItemIndex1 >= itemList.length || currentItemIndex2 >= itemList.length) {
-    displayTopList();
-    return;
-  }
-
-  displayItems();
 }
 
-function displayTopList() {
-  const topList = document.getElementById('topList');
-  
-  // Clear the current top list
-  topList.innerHTML = '';
+async function displayTopList() {
+  try {
+    const response = await fetch('/api/toplist');
+    const topList = await response.json();
 
-  // Convert votes object to an array of [itemIndex, voteCount] pairs
-  const voteArray = Object.entries(votes);
+    const listElement = document.getElementById('topList');
+    listElement.innerHTML = '';
 
-  // Sort the array based on vote count in descending order
-  voteArray.sort((a, b) => b[1] - a[1]);
+    for (const item of topList) {
+      const listItem = document.createElement('li');
+      listItem.textContent = item.name;
+      listElement.appendChild(listItem);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
 
-  // Display the top 15 items
-  for (let i = 0; i < Math.min(15, voteArray.length);
+getItems();
